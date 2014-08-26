@@ -17,6 +17,15 @@ print_dev (struct udev_device *dev)
 }
 
 
+void
+print_devtree (struct udev_device *dev)
+{
+	for (; dev; dev=udev_device_get_parent(dev)) {
+		print_dev(dev);
+	}
+}
+
+
 int
 main(int argc, char* argv[])
 {
@@ -32,20 +41,20 @@ main(int argc, char* argv[])
 		exit(1);
 	}
 	
-	/* Create a list of the devices in the 'hidraw' subsystem. */
+	/* Find the remote */
 	enumerate = udev_enumerate_new(udev);
-	if (udev_enumerate_add_match_subsystem(enumerate, "hidraw")) {
+	if (udev_enumerate_add_match_subsystem(enumerate, "hid")) {
 		perror("udev_enumerate_add_match_subsystem");
+		exit(1);
 	}
-	/*
-	if (udev_enumerate_add_match_sysattr(enumerate, "idVendor", "0609")) {
+	if (udev_enumerate_add_match_property(enumerate, "HID_ID", "0005:00000609:00000306")) {
 		perror("udev_enumerate_add_match_sysattr");
+		exit(1);
 	}
-	if (udev_enumerate_add_match_sysattr(enumerate, "idProduct", "0306")) {
-		perror("udev_enumerate_add_match_sysattr");
+	if (udev_enumerate_scan_devices(enumerate)) {
+		perror("udev_enumerate_scan_devices");
+		exit(1);
 	}
-	*/
-	udev_enumerate_scan_devices(enumerate);
 	devices = udev_enumerate_get_list_entry(enumerate);
 	/* For each item enumerated, print out its information.
 	   udev_list_entry_foreach is a macro which expands to
@@ -55,26 +64,9 @@ main(int argc, char* argv[])
 	udev_list_entry_foreach(dev_list_entry, devices) {
 		const char *path;
 		
-		/* Get the filename of the /sys entry for the device
-		   and create a udev_device object (dev) representing it */
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
-
-		/* usb_device_get_devnode() returns the path to the device node
-		   itself in /dev. */
 		print_dev(dev);
-
-		while ((dev = udev_device_get_parent(dev))) {
-			print_dev(dev);
-		}
-	
-		/* From here, we can call get_sysattr_value() for each file
-		   in the device's /sys entry. The strings passed into these
-		   functions (idProduct, idVendor, serial, etc.) correspond
-		   directly to the files in the directory which represents
-		   the USB device. Note that USB strings are Unicode, UCS2
-		   encoded, but the strings returned from
-		   udev_device_get_sysattr_value() are UTF-8 encoded. */
 		udev_device_unref(dev);
 	}
 	/* Free the enumerator object */
