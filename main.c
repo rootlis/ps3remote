@@ -35,6 +35,30 @@ print_devtree (struct udev_device *dev)
 }
 
 
+/*
+ * handle_hidraw
+ * Return values:
+ *	0: Matched device
+ *	1: No match
+ */
+int
+handle_hidraw (struct udev_device *dev)
+{
+	struct udev_device *parent;
+	const char *hid_id;
+
+	/* Check if the associated device has the right ID */
+	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
+	hid_id = udev_device_get_property_value(parent, "HID_ID");
+	if (strncmp(hid_id, "0005:00000609:00000306", 22)) {
+		return 1;
+	}
+
+	print_dev(dev);
+	return 0;
+}
+
+
 int
 main(int argc, char* argv[])
 {
@@ -64,19 +88,10 @@ main(int argc, char* argv[])
 	}
 	devices = udev_enumerate_get_list_entry(enumerate);
 	udev_list_entry_foreach(dev_list_entry, devices) {
-		const char *path, *hid_id;
-		struct udev_device *parent;
+		const char *path;
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
-
-		/* Check if the associated device has the right ID */
-		parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
-		hid_id = udev_device_get_property_value(parent, "HID_ID");
-		if (strncmp(hid_id, "0005:00000609:00000306", 22)) {
-			continue;
-		}
-
-		print_dev(dev);
+		handle_hidraw(dev);
 		udev_device_unref(dev);
 	}
 	udev_enumerate_unref(enumerate);
@@ -101,7 +116,7 @@ main(int argc, char* argv[])
 		ret = select(fd+1, &fds, NULL, NULL, &tv);
 		if (ret > 0 && FD_ISSET(fd, &fds)) {
 			if ((dev = udev_monitor_receive_device(mon))) {
-				print_dev(dev);
+				handle_hidraw(dev);
 			}
 		} else if (ret < 0) {
 			perror("select");
