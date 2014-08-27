@@ -10,21 +10,30 @@
 #include <linux/uinput.h>
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
-#define REPORT_COUNT 0x0b
-#define REMOTE_HID_ID "0005:00000609:00000306"
-#define MASK_NUMPARAMS 3
+#define UI_GET_SYSNAME(len)     _IOC(_IOC_READ, UINPUT_IOCTL_BASE, 300, len)
 
+/* PS3 Remote properties */
+#define REMOTE_HID_ID "0005:00000609:00000306"
+enum remote_info {
+	VENDOR_ID	= 0x0609,
+	PRODUCT_ID	= 0x0306,
+	REPORT_COUNT	= 0x0b,
+};
+
+
+/* Report descriptor stuff */
+#define MASK_NUMPARAMS 3
 
 enum tag_types {
 	TYPE_MAIN	= 0x0,
 	TYPE_GLOBAL	= 0x1,
 	TYPE_LOCAL	= 0x2,
-	TYPE_RESERVED	= 0x3
+	TYPE_RESERVED	= 0x3,
 };
 
 enum item_types {
 	ITEM_USAGEPAGE = 0x01,
-	ITEM_COLLECTION	= 0xa0
+	ITEM_COLLECTION	= 0xa0,
 };
 
 struct report {
@@ -35,6 +44,78 @@ struct report {
 	uint16_t press;
 };
 
+static const char *reserved = "(reserved)";
+
+static const char *main_itemtag_strings[8] = {
+	"INPUT",
+	"OUTPUT",
+	"COLLECTION",
+	"FEATURE",
+
+	"END COLLECTION",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+};
+
+static const char *global_itemtag_strings[16] = {
+	"USAGE PAGE",
+	"LOGICAL MINIMUM",
+	"LOGICAL MAXIMUM",
+	"PHYSICAL MINIMUM",
+
+	"PHYSICAL MAXIMUM",
+	"UNIT EXPONENT",
+	"UNIT",
+	"REPORT SIZE",
+
+	"REPORT ID",
+	"REPORT COUNT",
+	"PUSH",
+	"POP",
+
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+};
+
+static const char *local_itemtag_strings[16] = {
+	"USAGE",
+	"USAGE MINIMUM",
+	"USAGE MAXIMUM",
+	"DESIGNATOR INDEX",
+
+	"DESIGNATOR MINIMUM",
+	"DESIGNATOR MAXIMUM",
+	"STRING INDEX",
+	"STRING MINIMUM",
+
+	"STRING MAXIMUM",
+	"DELIMITER",
+	"(reserved)",
+	"(reserved)",
+
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+};
+
+static const char *collection_strings[7] = {
+	"Physical",
+	"Application",
+	"Logical",
+	"Report",
+	"Named Array",
+	"Usage Switch",
+	"Usage Modifier",
+};
+
+/* Keymaps */
+enum {
+	RELEASE = 0xffff
+};
 static const char *ps3remote_keymap_remote_strings[] = {
 	[0x00] = "KEY_1",
 	[0x01] = "KEY_2",
@@ -81,10 +162,9 @@ static const char *ps3remote_keymap_remote_strings[] = {
 	[0x81] = "KEY_RED",
 	[0x82] = "KEY_GREEN",
 	[0x83] = "KEY_YELLOW",
-	[0xff] = "",
 };
 
-static const unsigned int ps3remote_keymap_remote_buttons[] = {
+static const uint16_t ps3remote_keymap_remote_buttons[] = {
 	[0x00] = KEY_1,
 	[0x01] = KEY_2,
 	[0x02] = KEY_3,
@@ -130,76 +210,14 @@ static const unsigned int ps3remote_keymap_remote_buttons[] = {
 	[0x81] = KEY_RED,
 	[0x82] = KEY_GREEN,
 	[0x83] = KEY_YELLOW,
-	[0xff] = 0xff,
 };
 
-const char *reserved = "(reserved)";
-
-const char *main_itemtag_strings[8] = {
-	"INPUT",
-	"OUTPUT",
-	"COLLECTION",
-	"FEATURE",
-
-	"END COLLECTION",
-	"(reserved)",
-	"(reserved)",
-	"(reserved)"
+/* uinput stuff */
+enum uinput_keyvals {
+	KEYUP	= 0,
+	KEYDOWN	= 1,
 };
 
-const char *global_itemtag_strings[16] = {
-	"USAGE PAGE",
-	"LOGICAL MINIMUM",
-	"LOGICAL MAXIMUM",
-	"PHYSICAL MINIMUM",
-
-	"PHYSICAL MAXIMUM",
-	"UNIT EXPONENT",
-	"UNIT",
-	"REPORT SIZE",
-
-	"REPORT ID",
-	"REPORT COUNT",
-	"PUSH",
-	"POP",
-
-	"(reserved)",
-	"(reserved)",
-	"(reserved)",
-	"(reserved)"
-};
-
-const char *local_itemtag_strings[16] = {
-	"USAGE",
-	"USAGE MINIMUM",
-	"USAGE MAXIMUM",
-	"DESIGNATOR INDEX",
-
-	"DESIGNATOR MINIMUM",
-	"DESIGNATOR MAXIMUM",
-	"STRING INDEX",
-	"STRING MINIMUM",
-
-	"STRING MAXIMUM",
-	"DELIMITER",
-	"(reserved)",
-	"(reserved)",
-
-	"(reserved)",
-	"(reserved)"
-	"(reserved)"
-	"(reserved)"
-};
-
-const char *collection_strings[7] = {
-	"Physical",
-	"Application",
-	"Logical",
-	"Report",
-	"Named Array",
-	"Usage Switch",
-	"Usage Modifier"
-};
 
 
 void
@@ -356,22 +374,36 @@ open_hidraw_error:
 }
 
 
-int
-open_uinput (void) 
+uint16_t
+read_hidraw (int fd)
+{
+	struct report usage;
+	memset(&usage, 0, sizeof usage);
+	read(fd, &usage, sizeof usage);
+	if (usage.key == 0xff) {
+		return RELEASE;
+	}
+	puts(ps3remote_keymap_remote_strings[usage.key]);
+	return ps3remote_keymap_remote_buttons[usage.key];
+}
+
+
+static int
+uinput_open (void) 
 {
 	int fd;
 	struct uinput_user_dev uidev;
 	if ((fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK)) < 0) {
-		perror("open_uinput");
+		perror("uinput_open");
 		return -1;
 	}
 	if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
 		perror("UI_SET_EVBIT");
-		goto open_uinput_error;
+		goto uinput_open_error;
 	}
 	if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) {
 		perror("UI_SET_EVBIT");
-		goto open_uinput_error;
+		goto uinput_open_error;
 	}
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_1) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_2) < 0) goto set_keybit_error;
@@ -421,31 +453,31 @@ open_uinput (void)
 
 	memset(&uidev, 0, sizeof uidev);
 	snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "ps3remote");
-	uidev.id.bustype = BUS_BLUETOOTH;
+	uidev.id.bustype = BUS_VIRTUAL;
 	uidev.id.vendor  = 0x0609;
 	uidev.id.product = 0x0306;
 	uidev.id.version = 1;
 	if (write(fd, &uidev, sizeof(uidev)) < 0) {
 		perror("write");
-		goto open_uinput_error;
+		goto uinput_open_error;
 	}
 	if (ioctl(fd, UI_DEV_CREATE) < 0) {
 		perror("UI_DEV_CREATE");
-		goto open_uinput_error;
+		goto uinput_open_error;
 	}
 
 	return fd;
 
 set_keybit_error:
 	perror("UI_SET_KEYBIT");
-open_uinput_error:
+uinput_open_error:
 	close(fd);
 	return -1;
 }
 
 
-int
-close_uinput (int fd)
+static int
+uinput_close (int fd)
 {
 	if (ioctl(fd, UI_DEV_DESTROY) < 0) {
 		perror("UI_DEV_DESTROY");
@@ -454,30 +486,19 @@ close_uinput (int fd)
 }
 
 
-int
-write_uinput (int fd, unsigned int key)
+static int
+uinput_write (int fd, uint16_t key, int32_t value)
 {
-	struct input_event ev;
+	struct input_event ev[2];
 
 	memset(&ev, 0, sizeof(ev));
-	ev.type = EV_KEY;
-	ev.code = key;
-	ev.value = 1;
+	ev[0].type = EV_KEY;
+	ev[0].code = key;
+	ev[0].value = value;
+	ev[1].type = EV_SYN;
+	ev[1].code = SYN_REPORT;
 
 	return write(fd, &ev, sizeof(ev));
-}
-
-
-int
-read_hidraw (int fd)
-{
-	struct report usage;
-	uint8_t key;
-	memset(&usage, 0, sizeof usage);
-	read(fd, &usage, sizeof usage);
-	key = ps3remote_keymap_remote_buttons[usage.key];
-	printf("0x%02x => 0x%02x (%s)\n", usage.key, key, ps3remote_keymap_remote_strings[usage.key]);
-	return key;
 }
 
 
@@ -490,8 +511,9 @@ main (int argc, char* argv[])
 	struct udev_device *dev;
 	struct udev_monitor *mon;
 	int fd_udev, fd_hidraw, fd_uinput;
+	uint16_t key, oldkey = -1;
 
-	fd_uinput = open_uinput();
+	fd_uinput = uinput_open();
 
 	/* Create the udev object */
 	udev = udev_new();
@@ -530,7 +552,6 @@ main (int argc, char* argv[])
 		fd_set fds;
 		struct timeval tv;
 		const char *action;
-		unsigned int key;
 
 		memset(&tv, 0, sizeof tv);
 		FD_ZERO(&fds);
@@ -558,16 +579,29 @@ main (int argc, char* argv[])
 			}
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
-			if ((int)(key = read_hidraw(fd_hidraw)) != -1) {
-				write_uinput(fd_uinput, key);
+			if ((key = read_hidraw(fd_hidraw)) == RELEASE) {
+				printf("release %d...", oldkey);
+				fflush(stdin);
+				uinput_write(fd_uinput, oldkey, KEYUP);
+				oldkey = -1;
+				printf(" done\n");
+			} else {
+				printf("push %d...", key);
+				fflush(stdin);
+				uinput_write(fd_uinput, key, KEYDOWN);
+				oldkey = key;
+				printf(" done\n");
 			}
 		}
 		usleep(250*1000);
 	}
+	if (fd_hidraw != -1) {
+		close(fd_hidraw);
+	}
 	udev_monitor_unref(mon);
 	udev_unref(udev);
 
-	close_uinput(fd_uinput);
+	uinput_close(fd_uinput);
 
 	return 0;
 }
