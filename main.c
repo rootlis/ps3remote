@@ -337,7 +337,7 @@ open_hidraw (struct udev_device *dev)
 		return -1;
 	}
 
-	print_dev(dev);
+//	print_dev(dev);
 
 	/* Open device for reading */
 	devnode = udev_device_get_devnode(dev);
@@ -346,8 +346,9 @@ open_hidraw (struct udev_device *dev)
 		perror("open_hidraw");
 		return -1;
 	}
-	printf("# Opened %s.\n", devnode);
+	fprintf(stderr, "Opened %s.\n", devnode);
 
+/*
 	memset(&rdesc, 0, sizeof rdesc);
 	if (ioctl(fd, HIDIOCGRDESCSIZE, &rdesc_size) < 0) {
 		perror("HIDIOCGRDESCSIZE");
@@ -362,9 +363,9 @@ open_hidraw (struct udev_device *dev)
 	}
 	printf("# rdesc =\n");
 	print_rdesc(&rdesc);
-
 	putchar('\n');
 	fflush(stdout);
+*/
 
 	return fd;
 
@@ -383,7 +384,7 @@ read_hidraw (int fd)
 	if (usage.key == 0xff) {
 		return RELEASE;
 	}
-	puts(ps3remote_keymap_remote_strings[usage.key]);
+//	puts(ps3remote_keymap_remote_strings[usage.key]);
 	return ps3remote_keymap_remote_buttons[usage.key];
 }
 
@@ -500,15 +501,17 @@ uinput_write (int fd, uint16_t key, int32_t value)
 	ev[1].code = SYN_REPORT;
 
 	size = sizeof ev;
+/*
 	for (i=size/2 - 1; i>=0; i--) {
 		printf("0x%02x ", ((uint8_t*)ev)[i]);
 	}
 	putchar('\n');
-	write(fd, &(ev[0]), sizeof(ev[0]));
 	for (i=size - 1; i>=size/2; i--) {
 		printf("0x%02x ", ((uint8_t*)ev)[i]);
 	}
 	putchar('\n');
+*/
+	write(fd, &(ev[0]), sizeof(ev[0]));
 	write(fd, &(ev[1]), sizeof(ev[1]));
 	return 0;
 
@@ -532,7 +535,7 @@ main (int argc, char* argv[])
 	/* Create the udev object */
 	udev = udev_new();
 	if (!udev) {
-		printf("Can't create udev\n");
+		fprintf(stderr, "Can't create udev\n");
 		exit(1);
 	}
 	
@@ -549,7 +552,7 @@ main (int argc, char* argv[])
 		const char *path;
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
-		printf("Found existing device\n");
+//		printf("Found existing device\n");
 		fd_hidraw = open_hidraw(dev);
 		udev_device_unref(dev);
 		if (fd_hidraw > -1) {
@@ -571,6 +574,7 @@ main (int argc, char* argv[])
 		const char *action;
 
 		memset(&tv, 0, sizeof tv);
+		tv.tv_sec = 5;
 		FD_ZERO(&fds);
 		FD_SET(fd_udev, &fds);
 		if (fd_hidraw > 0) {
@@ -583,8 +587,8 @@ main (int argc, char* argv[])
 		}
 		if (FD_ISSET(fd_udev, &fds)) {
 			dev = udev_monitor_receive_device(mon);
-			printf("udev event\n");
-			print_dev(dev);
+//			printf("udev event\n");
+//			print_dev(dev);
 			action = udev_device_get_property_value(dev, "ACTION");
 			if (strcmp(action, "add") == 0) {
 				fd_hidraw = open_hidraw(dev);
@@ -592,7 +596,7 @@ main (int argc, char* argv[])
 				close(fd_hidraw);
 				fd_hidraw = -1;
 			} else {
-				print_dev(dev);
+//				print_dev(dev);
 			}
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
@@ -604,7 +608,6 @@ main (int argc, char* argv[])
 				oldkey = key;
 			}
 		}
-		usleep(250*1000);
 	}
 	if (fd_hidraw != -1) {
 		close(fd_hidraw);
