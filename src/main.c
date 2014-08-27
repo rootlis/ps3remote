@@ -12,7 +12,7 @@
 int
 find_hidraw (struct udev *udev)
 {
-	int fd;
+	int fd = -1;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *devices, *dev_list_entry;
 	struct udev_device *dev;
