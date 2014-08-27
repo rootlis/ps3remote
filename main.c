@@ -10,7 +10,6 @@
 #include <linux/uinput.h>
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
-#define REPORT_SIZE 12
 
 
 void
@@ -44,15 +43,123 @@ print_devtree (struct udev_device *dev)
 }
 
 
+#define MASK_NUMPARAMS 3
+const char *main_itemtag_strings[8] = {
+	"INPUT",
+	"OUTPUT",
+	"COLLECTION",
+	"FEATURE",
+
+	"END COLLECTION",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)"
+};
+const char *global_itemtag_strings[16] = {
+	"USAGE PAGE",
+	"LOGICAL MINIMUM",
+	"LOGICAL MAXIMUM",
+	"PHYSICAL MINIMUM",
+
+	"PHYSICAL MAXIMUM",
+	"UNIT EXPONENT",
+	"UNIT",
+	"REPORT SIZE",
+
+	"REPORT ID",
+	"REPORT COUNT",
+	"PUSH",
+	"POP",
+
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)"
+};
+const char *local_itemtag_strings[16] = {
+	"USAGE",
+	"USAGE MINIMUM",
+	"USAGE MAXIMUM",
+	"DESIGNATOR INDEX",
+
+	"DESIGNATOR MINIMUM",
+	"DESIGNATOR MAXIMUM",
+	"STRING INDEX",
+	"STRING MINIMUM",
+
+	"STRING MAXIMUM",
+	"DELIMITER",
+	"(reserved)",
+	"(reserved)",
+
+	"(reserved)",
+	"(reserved)"
+	"(reserved)"
+	"(reserved)"
+};
+const char *reserved = "(reserved)";
+
+
+enum tag_types {
+	TYPE_MAIN,
+	TYPE_GLOBAL,
+	TYPE_LOCAL,
+	TYPE_RESERVED
+};
+
+
+const char*
+itemtag_str (unsigned char tag)
+{
+	unsigned char type, prefix;
+	type = (tag >> 2) & 0x2;
+	switch (type) {
+		case TYPE_MAIN:
+			prefix = (tag >> 4) & 0x7;
+			return main_itemtag_strings[prefix];
+		case TYPE_GLOBAL:
+			prefix = (tag >> 4) & 0xf;
+			return global_itemtag_strings[prefix];
+		case TYPE_LOCAL:
+			prefix = (tag >> 4) & 0xf;
+			return local_itemtag_strings[prefix];
+	}
+	return reserved;
+}
+
+
+void
+print_rdesc (struct hidraw_report_descriptor *rdesc)
+{
+	int i, num_params;
+	unsigned char tag;
+	for (i=0; i<(*rdesc).size;) {
+		tag = (*rdesc).value[i++];
+		num_params = tag & MASK_NUMPARAMS;
+		printf("[0x%02x]", tag);
+		switch (num_params) {
+			case 3:
+				printf(" 0x%02x", (*rdesc).value[i++]);
+				printf(" 0x%02x", (*rdesc).value[i++]);
+			case 2:
+				printf(" 0x%02x", (*rdesc).value[i++]);
+			case 1:
+				printf(" 0x%02x", (*rdesc).value[i++]);
+		}
+		printf(" \t%s\n", itemtag_str(tag));
+	}
+}
+
+
 int
 handle_input (int fd)
 {
 	int i;
-	uint8_t buf[REPORT_SIZE];
+	uint8_t buf[12];
 	memset(buf, 0, sizeof buf);
 	read(fd, buf, sizeof buf - 1);
 	printf(">");
-	for (i=0; i<REPORT_SIZE; i++) {
+	for (i=0; i<12; i++) {
 		printf(" 0x%02x", buf[i]);
 	}
 	printf("\n");
@@ -73,7 +180,7 @@ open_hidraw (struct udev_device *dev)
 
 	struct hidraw_report_descriptor rdesc;
 	const char *devnode;
-	int i, rdesc_size = 0;
+	int rdesc_size = 0;
 
 	/* Check if the associated device has the right ID */
 	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
@@ -106,11 +213,8 @@ open_hidraw (struct udev_device *dev)
 		perror("HIDIOCGRDESC");
 		goto open_hidraw_error;
 	}
-	printf("# rdesc =");
-	for (i=0; i<rdesc_size; i++) {
-		printf(" 0x%02x", rdesc.value[i]);
-	}
-	putchar('\n');
+	printf("# rdesc =\n");
+	print_rdesc(&rdesc);
 
 	putchar('\n');
 	fflush(stdout);
@@ -153,6 +257,7 @@ main(int argc, char* argv[])
 		const char *path;
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
+		printf("Found existing device\n");
 		fd_hidraw = open_hidraw(dev);
 		udev_device_unref(dev);
 	}
@@ -171,10 +276,12 @@ main(int argc, char* argv[])
 		int ret;
 		const char *action;
 
+		memset(&tv, 0, sizeof tv);
 		FD_ZERO(&fds);
 		FD_SET(fd_udev, &fds);
-		FD_SET(fd_hidraw, &fds);
-		memset(&tv, 0, sizeof tv);
+		if (fd_hidraw > 0) {
+			FD_SET(fd_hidraw, &fds);
+		}
 
 		ret = select(MAX(fd_udev, fd_hidraw)+1, &fds, NULL, NULL, &tv);
 		if (ret < 0) {
@@ -182,9 +289,14 @@ main(int argc, char* argv[])
 		}
 		if (FD_ISSET(fd_udev, &fds)) {
 			dev = udev_monitor_receive_device(mon);
-			action = udev_device_get_sysattr_value(dev, "Action");
-			if (dev && (strncmp(action, "add", 3) == 0)) {
+			printf("udev event\n");
+			print_dev(dev);
+			action = udev_device_get_property_value(dev, "ACTION");
+			if (strcmp(action, "add") == 0) {
 				fd_hidraw = open_hidraw(dev);
+			} else if (strcmp(action, "remove") == 0) {
+				close(fd_hidraw);
+				fd_hidraw = -1;
 			} else {
 				print_dev(dev);
 			}
