@@ -1,13 +1,8 @@
 #include <libudev.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <stropts.h>
-#include <linux/input.h>
-#include <linux/hidraw.h>
 
 #include "hidraw.h"
 #include "uinput.h"

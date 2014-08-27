@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <linux/hidraw.h>
 
-#include "hid.h"
 #include "hidraw.h"
 #include "remote.h"
 
