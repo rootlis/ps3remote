@@ -10,6 +10,7 @@
 #include <linux/uinput.h>
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
+#define REPORT_COUNT 0x0b
 
 
 void
@@ -44,6 +45,7 @@ print_devtree (struct udev_device *dev)
 
 
 #define MASK_NUMPARAMS 3
+const char *reserved = "(reserved)";
 const char *main_itemtag_strings[8] = {
 	"INPUT",
 	"OUTPUT",
@@ -97,14 +99,33 @@ const char *local_itemtag_strings[16] = {
 	"(reserved)"
 	"(reserved)"
 };
-const char *reserved = "(reserved)";
+const char *collection_strings[7] = {
+	"Physical",
+	"Application",
+	"Logical",
+	"Report",
+	"Named Array",
+	"Usage Switch",
+	"Usage Modifier"
+};
 
+
+struct rdesc_item {
+	uint8_t tag;
+	uint32_t data;
+};
 
 enum tag_types {
-	TYPE_MAIN,
-	TYPE_GLOBAL,
-	TYPE_LOCAL,
-	TYPE_RESERVED
+	TYPE_MAIN	= 0x0,
+	TYPE_GLOBAL	= 0x1,
+	TYPE_LOCAL	= 0x2,
+	TYPE_RESERVED	= 0x3
+};
+
+
+enum item_types {
+	ITEM_USAGEPAGE = 0x01,
+	ITEM_COLLECTION	= 0xa0
 };
 
 
@@ -112,7 +133,7 @@ const char*
 itemtag_str (unsigned char tag)
 {
 	unsigned char type, prefix;
-	type = (tag >> 2) & 0x2;
+	type = (tag >> 2) & 0x3;
 	switch (type) {
 		case TYPE_MAIN:
 			prefix = (tag >> 4) & 0x7;
@@ -128,25 +149,45 @@ itemtag_str (unsigned char tag)
 }
 
 
+const char*
+itemarg_str (unsigned char tag, unsigned char arg)
+{
+	switch (tag & 0xfa) {
+		case ITEM_COLLECTION:
+			if (arg > 6) {
+				break;
+			}
+			return collection_strings[arg];
+	}
+	return NULL;
+}
+
+
 void
 print_rdesc (struct hidraw_report_descriptor *rdesc)
 {
 	int i, num_params;
 	unsigned char tag;
+	uint32_t arg;
 	for (i=0; i<(*rdesc).size;) {
 		tag = (*rdesc).value[i++];
+		arg = 0;
 		num_params = tag & MASK_NUMPARAMS;
-		printf("[0x%02x]", tag);
+		printf("[0x%02x %s]", tag, itemtag_str(tag));
 		switch (num_params) {
 			case 3:
-				printf(" 0x%02x", (*rdesc).value[i++]);
-				printf(" 0x%02x", (*rdesc).value[i++]);
+				arg |= (*rdesc).value[i++];
+				arg <<= 8;
+				arg |= (*rdesc).value[i++];
+				arg <<= 8;
 			case 2:
-				printf(" 0x%02x", (*rdesc).value[i++]);
+				arg |= (*rdesc).value[i++];
+				arg <<= 8;
 			case 1:
-				printf(" 0x%02x", (*rdesc).value[i++]);
+				arg |= (*rdesc).value[i++];
 		}
-		printf(" \t%s\n", itemtag_str(tag));
+		printf(" (0x%02x %s)", arg, itemarg_str(tag, arg));
+		putchar('\n');
 	}
 }
 
