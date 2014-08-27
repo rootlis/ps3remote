@@ -5,6 +5,47 @@
 #include <linux/hidraw.h>
 #include "hidraw.h"
 #include "remote.h"
+#include "rdescriptor.h"
+
+
+int
+verify_id (struct udev_device *dev)
+{
+	const char *hid_id;
+	struct udev_device *parent;
+	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
+	hid_id = udev_device_get_property_value(parent, "HID_ID");
+	if (strncmp(hid_id, REMOTE_HID_ID, 22)) {
+		fprintf(stderr, "open_hidraw: hid_id mismatch (%s)\n", hid_id);
+		return 0;
+	}
+	return 1;
+}
+
+
+void
+print_hidinfo (int fd)
+{
+	struct hidraw_report_descriptor rdesc;
+	int rdesc_size = 0;
+
+	memset(&rdesc, 0, sizeof rdesc);
+	if (ioctl(fd, HIDIOCGRDESCSIZE, &rdesc_size) < 0) {
+		perror("HIDIOCGRDESCSIZE");
+		return;
+	}
+	rdesc.size = rdesc_size;
+	printf("# rdesc_size = %d\n", rdesc_size);
+
+	if (ioctl(fd, HIDIOCGRDESC, &rdesc) < 0) {
+		perror("HIDIOCGRDESC");
+		return;
+	}
+	printf("# rdesc =\n");
+	print_rdesc(&rdesc);
+	putchar('\n');
+	fflush(stdout);
+}
 
 
 /*
@@ -14,20 +55,12 @@
 int
 open_hidraw (struct udev_device *dev)
 {
-	struct udev_device *parent;
-	const char *hid_id;
 	int fd;
 	const char *devnode;
 
-	/* Check if the associated device has the right ID */
-	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
-	hid_id = udev_device_get_property_value(parent, "HID_ID");
-	if (strncmp(hid_id, REMOTE_HID_ID, 22)) {
-		fprintf(stderr, "open_hidraw: hid_id mismatch (%s)\n", hid_id);
+	if (!verify_id(dev)) {
 		return -1;
 	}
-
-//	print_dev(dev);
 
 	/* Open device for reading */
 	devnode = udev_device_get_devnode(dev);
@@ -37,34 +70,7 @@ open_hidraw (struct udev_device *dev)
 		return -1;
 	}
 	fprintf(stderr, "Opened %s.\n", devnode);
-
-/*
-	struct hidraw_report_descriptor rdesc;
-	int rdesc_size = 0;
-
-	memset(&rdesc, 0, sizeof rdesc);
-	if (ioctl(fd, HIDIOCGRDESCSIZE, &rdesc_size) < 0) {
-		perror("HIDIOCGRDESCSIZE");
-		goto open_hidraw_error;
-	}
-	rdesc.size = rdesc_size;
-	printf("# rdesc_size = %d\n", rdesc_size);
-
-	if (ioctl(fd, HIDIOCGRDESC, &rdesc) < 0) {
-		perror("HIDIOCGRDESC");
-		goto open_hidraw_error;
-	}
-	printf("# rdesc =\n");
-	print_rdesc(&rdesc);
-	putchar('\n');
-	fflush(stdout);
-	return fd;
-
-open_hidraw_error:
-	close(fd);
-	return -1;
-*/
-
+//	print_hidinfo(fd);
 	return fd;
 }
 
