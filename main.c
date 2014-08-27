@@ -3,6 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <stdint.h>
+
+#define MAX(a,b) ((a)>(b)?(a):(b))
+#define REPORT_SIZE 12
 
 void
 print_dev (struct udev_device *dev)
@@ -35,27 +40,49 @@ print_devtree (struct udev_device *dev)
 }
 
 
+int
+handle_input (int fd)
+{
+	int i;
+	uint8_t buf[REPORT_SIZE];
+	memset(buf, 0, sizeof buf);
+	read(fd, buf, sizeof buf - 1);
+	printf(">");
+	for (i=0; i<REPORT_SIZE; i++) {
+		printf(" 0x%02x", buf[i]);
+	}
+	printf("\n");
+	return 0;
+}
+
+
 /*
  * handle_hidraw
- * Return values:
- *	0: Matched device
- *	1: No match
+ * Returns a FD for reading the hidraw, or -1 if the hidraw did not match.
  */
 int
 handle_hidraw (struct udev_device *dev)
 {
 	struct udev_device *parent;
 	const char *hid_id;
+	int fd;
 
 	/* Check if the associated device has the right ID */
 	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
 	hid_id = udev_device_get_property_value(parent, "HID_ID");
 	if (strncmp(hid_id, "0005:00000609:00000306", 22)) {
-		return 1;
+		return -1;
+	}
+
+	/* Open device for reading */
+	fd = open(udev_device_get_devnode(dev), O_RDONLY | O_NONBLOCK);
+	if (fd < 0) {
+		perror("handle_hidraw");
+		return -1;
 	}
 
 	print_dev(dev);
-	return 0;
+	return fd;
 }
 
 
@@ -67,7 +94,7 @@ main(int argc, char* argv[])
 	struct udev_list_entry *devices, *dev_list_entry;
 	struct udev_device *dev;
 	struct udev_monitor *mon;
-	int fd;
+	int fd_udev, fd_hidraw;
 	
 	/* Create the udev object */
 	udev = udev_new();
@@ -80,18 +107,16 @@ main(int argc, char* argv[])
 	enumerate = udev_enumerate_new(udev);
 	if (udev_enumerate_add_match_subsystem(enumerate, "hidraw")) {
 		perror("udev_enumerate_add_match_subsystem");
-		exit(1);
 	}
 	if (udev_enumerate_scan_devices(enumerate)) {
 		perror("udev_enumerate_scan_devices");
-		exit(1);
 	}
 	devices = udev_enumerate_get_list_entry(enumerate);
 	udev_list_entry_foreach(dev_list_entry, devices) {
 		const char *path;
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
-		handle_hidraw(dev);
+		fd_hidraw = handle_hidraw(dev);
 		udev_device_unref(dev);
 	}
 	udev_enumerate_unref(enumerate);
@@ -100,31 +125,37 @@ main(int argc, char* argv[])
 	mon = udev_monitor_new_from_netlink(udev, "udev");
 	if (udev_monitor_filter_add_match_subsystem_devtype(mon, "hidraw", NULL)) {
 		perror("udev_monitor_filter_add_match_subsystem_devtype");
-		exit(1);
 	}
 	udev_monitor_enable_receiving(mon);
-	fd = udev_monitor_get_fd(mon);
+	fd_udev = udev_monitor_get_fd(mon);
 	while(1) {
 		fd_set fds;
 		struct timeval tv;
 		int ret;
+		const char *action;
 
 		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
+		FD_SET(fd_udev, &fds);
+		FD_SET(fd_hidraw, &fds);
 		memset(&tv, 0, sizeof tv);
 
-		ret = select(fd+1, &fds, NULL, NULL, &tv);
-		if (ret > 0 && FD_ISSET(fd, &fds)) {
-			if ((dev = udev_monitor_receive_device(mon))) {
-				handle_hidraw(dev);
-			}
-		} else if (ret < 0) {
+		ret = select(MAX(fd_udev, fd_hidraw)+1, &fds, NULL, NULL, &tv);
+		if (ret < 0) {
 			perror("select");
-			exit(1);
+		}
+		if (FD_ISSET(fd_udev, &fds)) {
+			dev = udev_monitor_receive_device(mon);
+			action = udev_device_get_sysattr_value(dev, "Action");
+			if (dev && (strncmp(action, "add", 3) == 0)) {
+				fd_hidraw = handle_hidraw(dev);
+			} else {
+				print_dev(dev);
+			}
+		}
+		if (FD_ISSET(fd_hidraw, &fds)) {
+			handle_input(fd_hidraw);
 		}
 		usleep(250*1000);
-		printf(".");
-		fflush(stdout);
 	}
 	udev_monitor_unref(mon);
 
