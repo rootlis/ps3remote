@@ -4,8 +4,10 @@
 #include <unistd.h>
 #include <linux/hidraw.h>
 
+#include "hid.h"
 #include "hidraw.h"
 #include "remote.h"
+#include "utils.h"
 
 
 int
@@ -45,7 +47,7 @@ open_hidraw (struct udev_device *dev)
 		return -1;
 	}
 	fprintf(stderr, "Opened %s.\n", devnode);
-//	print_hidinfo(fd);
+	DEBUG_FN(print_hidinfo(fd));
 	return fd;
 }
 
@@ -59,6 +61,6 @@ read_hidraw (int fd)
 	if (usage.key == 0xff) {
 		return RELEASE;
 	}
-//	puts(ps3remote_keymap_remote_strings[usage.key]);
+	debug_puts(ps3remote_keymap_remote_strings[usage.key]);
 	return ps3remote_keymap_remote_buttons[usage.key];
 }

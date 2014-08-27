@@ -30,7 +30,7 @@ static int
 uinput_write (int fd, struct input_event *ev, size_t size)
 {
 	ssize_t bytes;
-	if (DEBUG) debug_event(ev);
+	DEBUG_FN(debug_event(ev));
 	if ((bytes = write(fd, ev, size)) < size) {
 		if (bytes < 0) {
 			perror("write");

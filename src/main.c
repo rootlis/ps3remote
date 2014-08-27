@@ -28,7 +28,7 @@ find_hidraw (struct udev *udev)
 		const char *path;
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
-//		printf("Found existing device\n");
+		debug_puts("Found existing device");
 		fd = open_hidraw(dev);
 		udev_device_unref(dev);
 		if (fd > -1) {
@@ -86,8 +86,8 @@ main (int argc, char* argv[])
 		}
 		if (FD_ISSET(fd_udev, &fds)) {
 			dev = udev_monitor_receive_device(mon);
-//			printf("udev event\n");
-//			print_dev(dev);
+			debug_puts("udev event");
+//			DEBUG_FN(print_dev(dev));
 			action = udev_device_get_property_value(dev, "ACTION");
 			if (strcmp(action, "add") == 0) {
 				fd_hidraw = open_hidraw(dev);
@@ -95,7 +95,7 @@ main (int argc, char* argv[])
 				close(fd_hidraw);
 				fd_hidraw = -1;
 			} else {
-//				print_dev(dev);
+//				DEBUG_FN(print_dev(dev));
 			}
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
