@@ -11,7 +11,29 @@
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define REPORT_COUNT 0x0b
+#define REMOTE_HID_ID "0005:00000609:00000306"
+#define MASK_NUMPARAMS 3
 
+
+enum tag_types {
+	TYPE_MAIN	= 0x0,
+	TYPE_GLOBAL	= 0x1,
+	TYPE_LOCAL	= 0x2,
+	TYPE_RESERVED	= 0x3
+};
+
+enum item_types {
+	ITEM_USAGEPAGE = 0x01,
+	ITEM_COLLECTION	= 0xa0
+};
+
+struct report {
+	uint8_t id;
+	uint8_t junk[3];
+	uint8_t key;
+	uint8_t effs[5];
+	uint16_t press;
+};
 
 static const char *ps3remote_keymap_remote_strings[] = {
 	[0x00] = "KEY_1",
@@ -59,7 +81,9 @@ static const char *ps3remote_keymap_remote_strings[] = {
 	[0x81] = "KEY_RED",
 	[0x82] = "KEY_GREEN",
 	[0x83] = "KEY_YELLOW",
+	[0xff] = "",
 };
+
 static const unsigned int ps3remote_keymap_remote_buttons[] = {
 	[0x00] = KEY_1,
 	[0x01] = KEY_2,
@@ -106,7 +130,77 @@ static const unsigned int ps3remote_keymap_remote_buttons[] = {
 	[0x81] = KEY_RED,
 	[0x82] = KEY_GREEN,
 	[0x83] = KEY_YELLOW,
+	[0xff] = 0xff,
 };
+
+const char *reserved = "(reserved)";
+
+const char *main_itemtag_strings[8] = {
+	"INPUT",
+	"OUTPUT",
+	"COLLECTION",
+	"FEATURE",
+
+	"END COLLECTION",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)"
+};
+
+const char *global_itemtag_strings[16] = {
+	"USAGE PAGE",
+	"LOGICAL MINIMUM",
+	"LOGICAL MAXIMUM",
+	"PHYSICAL MINIMUM",
+
+	"PHYSICAL MAXIMUM",
+	"UNIT EXPONENT",
+	"UNIT",
+	"REPORT SIZE",
+
+	"REPORT ID",
+	"REPORT COUNT",
+	"PUSH",
+	"POP",
+
+	"(reserved)",
+	"(reserved)",
+	"(reserved)",
+	"(reserved)"
+};
+
+const char *local_itemtag_strings[16] = {
+	"USAGE",
+	"USAGE MINIMUM",
+	"USAGE MAXIMUM",
+	"DESIGNATOR INDEX",
+
+	"DESIGNATOR MINIMUM",
+	"DESIGNATOR MAXIMUM",
+	"STRING INDEX",
+	"STRING MINIMUM",
+
+	"STRING MAXIMUM",
+	"DELIMITER",
+	"(reserved)",
+	"(reserved)",
+
+	"(reserved)",
+	"(reserved)"
+	"(reserved)"
+	"(reserved)"
+};
+
+const char *collection_strings[7] = {
+	"Physical",
+	"Application",
+	"Logical",
+	"Report",
+	"Named Array",
+	"Usage Switch",
+	"Usage Modifier"
+};
+
 
 void
 print_dev (struct udev_device *dev)
@@ -137,86 +231,6 @@ print_devtree (struct udev_device *dev)
 		print_dev(dev);
 	}
 }
-
-
-#define MASK_NUMPARAMS 3
-const char *reserved = "(reserved)";
-const char *main_itemtag_strings[8] = {
-	"INPUT",
-	"OUTPUT",
-	"COLLECTION",
-	"FEATURE",
-
-	"END COLLECTION",
-	"(reserved)",
-	"(reserved)",
-	"(reserved)"
-};
-const char *global_itemtag_strings[16] = {
-	"USAGE PAGE",
-	"LOGICAL MINIMUM",
-	"LOGICAL MAXIMUM",
-	"PHYSICAL MINIMUM",
-
-	"PHYSICAL MAXIMUM",
-	"UNIT EXPONENT",
-	"UNIT",
-	"REPORT SIZE",
-
-	"REPORT ID",
-	"REPORT COUNT",
-	"PUSH",
-	"POP",
-
-	"(reserved)",
-	"(reserved)",
-	"(reserved)",
-	"(reserved)"
-};
-const char *local_itemtag_strings[16] = {
-	"USAGE",
-	"USAGE MINIMUM",
-	"USAGE MAXIMUM",
-	"DESIGNATOR INDEX",
-
-	"DESIGNATOR MINIMUM",
-	"DESIGNATOR MAXIMUM",
-	"STRING INDEX",
-	"STRING MINIMUM",
-
-	"STRING MAXIMUM",
-	"DELIMITER",
-	"(reserved)",
-	"(reserved)",
-
-	"(reserved)",
-	"(reserved)"
-	"(reserved)"
-	"(reserved)"
-};
-const char *collection_strings[7] = {
-	"Physical",
-	"Application",
-	"Logical",
-	"Report",
-	"Named Array",
-	"Usage Switch",
-	"Usage Modifier"
-};
-
-
-enum tag_types {
-	TYPE_MAIN	= 0x0,
-	TYPE_GLOBAL	= 0x1,
-	TYPE_LOCAL	= 0x2,
-	TYPE_RESERVED	= 0x3
-};
-
-
-enum item_types {
-	ITEM_USAGEPAGE = 0x01,
-	ITEM_COLLECTION	= 0xa0
-};
 
 
 const char*
@@ -282,27 +296,6 @@ print_rdesc (struct hidraw_report_descriptor *rdesc)
 }
 
 
-struct report {
-	uint8_t id;
-	uint8_t junk[3];
-	uint8_t key;
-	uint8_t effs[5];
-	uint16_t press;
-};
-
-int
-handle_input (int fd)
-{
-	struct report usage;
-	uint8_t key;
-	memset(&usage, 0, sizeof usage);
-	read(fd, &usage, sizeof usage);
-	key = ps3remote_keymap_remote_buttons[usage.key];
-	printf("0x%02x => 0x%02x (%s)\n", usage.key, key, ps3remote_keymap_remote_strings[usage.key]);
-	return 0;
-}
-
-
 /*
  * open_hidraw
  * Returns a FD for reading the hidraw, or -1 if the hidraw did not match.
@@ -321,7 +314,7 @@ open_hidraw (struct udev_device *dev)
 	/* Check if the associated device has the right ID */
 	parent = udev_device_get_parent_with_subsystem_devtype(dev, "hid", NULL);
 	hid_id = udev_device_get_property_value(parent, "HID_ID");
-	if (strncmp(hid_id, "0005:00000609:00000306", 22)) {
+	if (strncmp(hid_id, REMOTE_HID_ID, 22)) {
 		fprintf(stderr, "open_hidraw: hid_id mismatch (%s)\n", hid_id);
 		return -1;
 	}
@@ -332,7 +325,7 @@ open_hidraw (struct udev_device *dev)
 	devnode = udev_device_get_devnode(dev);
 	fd = open(devnode, O_RDONLY | O_NONBLOCK);
 	if (fd < 0) {
-		perror("open");
+		perror("open_hidraw");
 		return -1;
 	}
 	printf("# Opened %s.\n", devnode);
@@ -364,15 +357,142 @@ open_hidraw_error:
 
 
 int
-main(int argc, char* argv[])
+open_uinput (void) 
+{
+	int fd;
+	struct uinput_user_dev uidev;
+	if ((fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK)) < 0) {
+		perror("open_uinput");
+		return -1;
+	}
+	if (ioctl(fd, UI_SET_EVBIT, EV_SYN) < 0) {
+		perror("UI_SET_EVBIT");
+		goto open_uinput_error;
+	}
+	if (ioctl(fd, UI_SET_EVBIT, EV_KEY) < 0) {
+		perror("UI_SET_EVBIT");
+		goto open_uinput_error;
+	}
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_1) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_2) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_3) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_4) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_5) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_6) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_7) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_8) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_9) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_0) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_ENTER) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_ESC) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_CLEAR) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_EJECTCD) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_MENU) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_TIME) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PREVIOUS) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_NEXT) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PLAY) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_REWIND) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_FORWARD) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_STOP) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PAUSE) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_CONTEXT_MENU) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_HOME) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_LIST) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_LANGUAGE) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_UP) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_DOWN) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_LEFT) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_OPTION) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_BACK) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, BTN_0) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_SCREEN) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_FRAMEBACK) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_FRAMEFORWARD) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_SUBTITLE) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_AUDIO) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_ANGLE) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_INFO) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_BLUE) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_RED) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_GREEN) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_YELLOW) < 0) goto set_keybit_error;
+
+	memset(&uidev, 0, sizeof uidev);
+	snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "ps3remote");
+	uidev.id.bustype = BUS_BLUETOOTH;
+	uidev.id.vendor  = 0x0609;
+	uidev.id.product = 0x0306;
+	uidev.id.version = 1;
+	if (write(fd, &uidev, sizeof(uidev)) < 0) {
+		perror("write");
+		goto open_uinput_error;
+	}
+	if (ioctl(fd, UI_DEV_CREATE) < 0) {
+		perror("UI_DEV_CREATE");
+		goto open_uinput_error;
+	}
+
+	return fd;
+
+set_keybit_error:
+	perror("UI_SET_KEYBIT");
+open_uinput_error:
+	close(fd);
+	return -1;
+}
+
+
+int
+close_uinput (int fd)
+{
+	if (ioctl(fd, UI_DEV_DESTROY) < 0) {
+		perror("UI_DEV_DESTROY");
+	}
+	return close(fd);
+}
+
+
+int
+write_uinput (int fd, unsigned int key)
+{
+	struct input_event ev;
+
+	memset(&ev, 0, sizeof(ev));
+	ev.type = EV_KEY;
+	ev.code = key;
+	ev.value = 1;
+
+	return write(fd, &ev, sizeof(ev));
+}
+
+
+int
+read_hidraw (int fd)
+{
+	struct report usage;
+	uint8_t key;
+	memset(&usage, 0, sizeof usage);
+	read(fd, &usage, sizeof usage);
+	key = ps3remote_keymap_remote_buttons[usage.key];
+	printf("0x%02x => 0x%02x (%s)\n", usage.key, key, ps3remote_keymap_remote_strings[usage.key]);
+	return key;
+}
+
+
+int
+main (int argc, char* argv[])
 {
 	struct udev *udev;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *devices, *dev_list_entry;
 	struct udev_device *dev;
 	struct udev_monitor *mon;
-	int fd_udev, fd_hidraw;
-	
+	int fd_udev, fd_hidraw, fd_uinput;
+
+	fd_uinput = open_uinput();
+
 	/* Create the udev object */
 	udev = udev_new();
 	if (!udev) {
@@ -409,8 +529,8 @@ main(int argc, char* argv[])
 	while(1) {
 		fd_set fds;
 		struct timeval tv;
-		int ret;
 		const char *action;
+		unsigned int key;
 
 		memset(&tv, 0, sizeof tv);
 		FD_ZERO(&fds);
@@ -419,9 +539,9 @@ main(int argc, char* argv[])
 			FD_SET(fd_hidraw, &fds);
 		}
 
-		ret = select(MAX(fd_udev, fd_hidraw)+1, &fds, NULL, NULL, &tv);
-		if (ret < 0) {
+		if (select(MAX(fd_udev, fd_hidraw)+1, &fds, NULL, NULL, &tv) < 0) {
 			perror("select");
+			break;
 		}
 		if (FD_ISSET(fd_udev, &fds)) {
 			dev = udev_monitor_receive_device(mon);
@@ -438,13 +558,16 @@ main(int argc, char* argv[])
 			}
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
-			handle_input(fd_hidraw);
+			if ((int)(key = read_hidraw(fd_hidraw)) != -1) {
+				write_uinput(fd_uinput, key);
+			}
 		}
 		usleep(250*1000);
 	}
 	udev_monitor_unref(mon);
-
 	udev_unref(udev);
+
+	close_uinput(fd_uinput);
 
 	return 0;
 }
