@@ -1,11 +1,15 @@
-CC=clang
-CFLAGS=-Wall -O3
+CC = cc
+CFLAGS = -Wall -O3
 
-ps3remote: main.o uinput.o hidraw.o hid.o
-	$(CC) $(CFLAGS) -ludev -o ps3remote main.o uinput.o hidraw.o hid.o
+SRC = hid.c hidraw.c main.c uinput.c
+OBJ = $(SRC:.c=.o)
+
+ps3remote: $(OBJ)
+	$(CC) $(CFLAGS) -ludev -o ps3remote $(OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
 
+.PHONY: clean
 clean:
 	rm -f ps3remote *.o
