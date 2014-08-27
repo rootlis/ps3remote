@@ -1,8 +1,8 @@
 CC=clang
-CFLAGS=-Wall -ludev -g
+CFLAGS=-Wall -g
 
 ps3remote: main.o
-	$(CC) $(CFLAGS) -o ps3remote main.o
+	$(CC) $(CFLAGS) -ludev -o ps3remote main.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $<
