@@ -15,28 +15,13 @@
 #include "rdescriptor.h"
 #include "utils.h"
 
-
 int
-main (int argc, char* argv[])
+find_hidraw (struct udev *udev)
 {
-	struct udev *udev;
+	int fd;
 	struct udev_enumerate *enumerate;
 	struct udev_list_entry *devices, *dev_list_entry;
 	struct udev_device *dev;
-	struct udev_monitor *mon;
-	int fd_udev, fd_hidraw, fd_uinput;
-	uint16_t key, oldkey = -1;
-
-	fd_uinput = uinput_open();
-
-	/* Create the udev object */
-	udev = udev_new();
-	if (!udev) {
-		fprintf(stderr, "Can't create udev\n");
-		exit(1);
-	}
-	
-	/* Find the hidraw device */
 	enumerate = udev_enumerate_new(udev);
 	if (udev_enumerate_add_match_subsystem(enumerate, "hidraw")) {
 		perror("udev_enumerate_add_match_subsystem");
@@ -50,13 +35,36 @@ main (int argc, char* argv[])
 		path = udev_list_entry_get_name(dev_list_entry);
 		dev = udev_device_new_from_syspath(udev, path);
 //		printf("Found existing device\n");
-		fd_hidraw = open_hidraw(dev);
+		fd = open_hidraw(dev);
 		udev_device_unref(dev);
-		if (fd_hidraw > -1) {
+		if (fd > -1) {
 			break;
 		}
 	}
 	udev_enumerate_unref(enumerate);
+	return fd;
+}
+
+
+int
+main (int argc, char* argv[])
+{
+	struct udev *udev;
+	struct udev_device *dev;
+	struct udev_monitor *mon;
+	int fd_udev, fd_hidraw, fd_uinput;
+	uint16_t key, oldkey = -1;
+
+	fd_uinput = uinput_open();
+
+	/* Create the udev object */
+	udev = udev_new();
+	if (!udev) {
+		fprintf(stderr, "Can't create udev\n");
+		exit(1);
+	}
+
+	fd_hidraw = find_hidraw(udev);
 
 	/* Monitor for hidraw devices */
 	mon = udev_monitor_new_from_netlink(udev, "udev");
