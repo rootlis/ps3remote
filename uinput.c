@@ -3,9 +3,45 @@
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <linux/input.h>
 #include <linux/uinput.h>
 #include "uinput.h"
+#include "remote.h"
+#include "utils.h"
+
+
+static void
+debug_event (struct input_event *ev)
+{
+	int size;
+	int i;
+	size = sizeof ev;
+	for (i=size/2 - 1; i>=0; i--) {
+		printf("0x%02x ", ((uint8_t*)ev)[i]);
+	}
+	putchar('\n');
+	for (i=size - 1; i>=size/2; i--) {
+		printf("0x%02x ", ((uint8_t*)ev)[i]);
+	}
+	putchar('\n');
+}
+
+
+static int
+uinput_write (int fd, struct input_event *ev, size_t size)
+{
+	ssize_t bytes;
+	if (DEBUG) debug_event(ev);
+	if ((bytes = write(fd, ev, size)) < size) {
+		if (bytes < 0) {
+			perror("write");
+			return -1;
+		}
+		fprintf(stderr, "uinput_write: unable to write entire struct "
+			"(sent %zd of %zd bytes)\n", bytes, size);
+		return -1;
+	}
+	return 0;
+}
 
 
 int
@@ -72,10 +108,10 @@ uinput_open (void)
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_YELLOW) < 0) goto set_keybit_error;
 
 	memset(&uidev, 0, sizeof uidev);
-	snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, "ps3remote");
+	snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, UREMOTE_NAME);
 	uidev.id.bustype = BUS_VIRTUAL;
-	uidev.id.vendor  = 0x0609;
-	uidev.id.product = 0x0306;
+	uidev.id.vendor  = VENDOR_ID;
+	uidev.id.product = PRODUCT_ID;
 	uidev.id.version = 1;
 	if (write(fd, &uidev, sizeof(uidev)) < 0) {
 		perror("write");
@@ -107,33 +143,26 @@ uinput_close (int fd)
 
 
 int
-uinput_write (int fd, uint16_t key, int32_t value)
+uinput_sendkey (int fd, uint16_t key, int32_t value)
 {
 	struct input_event ev[2];
-	int size;
 
-	memset(&ev, 0, sizeof(ev));
+	memset(&ev, 0, sizeof ev);
 	ev[0].type = EV_KEY;
 	ev[0].code = key;
 	ev[0].value = value;
 	ev[1].type = EV_SYN;
 	ev[1].code = SYN_REPORT;
 
-	size = sizeof ev;
-/*
-	int i;
-	for (i=size/2 - 1; i>=0; i--) {
-		printf("0x%02x ", ((uint8_t*)ev)[i]);
-	}
-	putchar('\n');
-	for (i=size - 1; i>=size/2; i--) {
-		printf("0x%02x ", ((uint8_t*)ev)[i]);
-	}
-	putchar('\n');
-*/
-	write(fd, &(ev[0]), sizeof(ev[0]));
-	write(fd, &(ev[1]), sizeof(ev[1]));
+	uinput_write(fd, &ev[0], sizeof ev[0]);
+	uinput_write(fd, &ev[1], sizeof ev[1]);
 	return 0;
 
-	return write(fd, &ev, sizeof(ev));
+	/*
+	 * Unworking code, sends the EV_KEY and EV_SYN together. On RPi, only
+	 * every eigth EV_SYN is received.
+	 */
+	uinput_write(fd, ev, sizeof ev);
+	return 0;
+
 }

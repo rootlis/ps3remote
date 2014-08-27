@@ -106,10 +106,10 @@ main (int argc, char* argv[])
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
 			if ((key = read_hidraw(fd_hidraw)) == RELEASE) {
-				uinput_write(fd_uinput, oldkey, KEYUP);
+				uinput_sendkey(fd_uinput, oldkey, KEYUP);
 				oldkey = -1;
 			} else {
-				uinput_write(fd_uinput, key, KEYDOWN);
+				uinput_sendkey(fd_uinput, key, KEYDOWN);
 				oldkey = key;
 			}
 		}

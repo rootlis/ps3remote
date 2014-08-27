@@ -10,6 +10,6 @@ enum uinput_keyvals {
 
 int uinput_open (void);
 int uinput_close (int fd);
-int uinput_write (int fd, uint16_t key, int32_t value);
+int uinput_sendkey (int fd, uint16_t key, int32_t value);
 
 #endif
