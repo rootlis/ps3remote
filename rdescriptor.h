@@ -84,8 +84,6 @@ static const char *collection_strings[7] = {
 };
 
 
-const char* itemtag_str (unsigned char tag);
-const char* itemarg_str (unsigned char tag, unsigned char arg);
-void print_rdesc (struct hidraw_report_descriptor *rdesc);
+void print_hidinfo (int fd);
 
 #endif

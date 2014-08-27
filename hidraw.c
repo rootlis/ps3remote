@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <linux/hidraw.h>
+
 #include "hidraw.h"
 #include "remote.h"
 #include "rdescriptor.h"
@@ -20,31 +21,6 @@ verify_id (struct udev_device *dev)
 		return 0;
 	}
 	return 1;
-}
-
-
-void
-print_hidinfo (int fd)
-{
-	struct hidraw_report_descriptor rdesc;
-	int rdesc_size = 0;
-
-	memset(&rdesc, 0, sizeof rdesc);
-	if (ioctl(fd, HIDIOCGRDESCSIZE, &rdesc_size) < 0) {
-		perror("HIDIOCGRDESCSIZE");
-		return;
-	}
-	rdesc.size = rdesc_size;
-	printf("# rdesc_size = %d\n", rdesc_size);
-
-	if (ioctl(fd, HIDIOCGRDESC, &rdesc) < 0) {
-		perror("HIDIOCGRDESC");
-		return;
-	}
-	printf("# rdesc =\n");
-	print_rdesc(&rdesc);
-	putchar('\n');
-	fflush(stdout);
 }
 
 
