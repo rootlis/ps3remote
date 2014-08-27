@@ -6,7 +6,7 @@
 #include <linux/ioctl.h>
 #include <linux/hidraw.h>
 
-#include "rdescriptor.h"
+#include "hid.h"
 
 
 const char*

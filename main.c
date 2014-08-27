@@ -12,7 +12,6 @@
 #include "hidraw.h"
 #include "uinput.h"
 #include "remote.h"
-#include "rdescriptor.h"
 #include "utils.h"
 
 int
