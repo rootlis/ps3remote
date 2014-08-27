@@ -393,7 +393,7 @@ uinput_open (void)
 {
 	int fd;
 	struct uinput_user_dev uidev;
-	if ((fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK)) < 0) {
+	if ((fd = open("/dev/uinput", O_WRONLY)) < 0) {
 		perror("uinput_open");
 		return -1;
 	}
@@ -490,6 +490,7 @@ static int
 uinput_write (int fd, uint16_t key, int32_t value)
 {
 	struct input_event ev[2];
+	int i, size;
 
 	memset(&ev, 0, sizeof(ev));
 	ev[0].type = EV_KEY;
@@ -497,6 +498,19 @@ uinput_write (int fd, uint16_t key, int32_t value)
 	ev[0].value = value;
 	ev[1].type = EV_SYN;
 	ev[1].code = SYN_REPORT;
+
+	size = sizeof ev;
+	for (i=size/2 - 1; i>=0; i--) {
+		printf("0x%02x ", ((uint8_t*)ev)[i]);
+	}
+	putchar('\n');
+	write(fd, &(ev[0]), sizeof(ev[0]));
+	for (i=size - 1; i>=size/2; i--) {
+		printf("0x%02x ", ((uint8_t*)ev)[i]);
+	}
+	putchar('\n');
+	write(fd, &(ev[1]), sizeof(ev[1]));
+	return 0;
 
 	return write(fd, &ev, sizeof(ev));
 }
@@ -538,6 +552,9 @@ main (int argc, char* argv[])
 		printf("Found existing device\n");
 		fd_hidraw = open_hidraw(dev);
 		udev_device_unref(dev);
+		if (fd_hidraw > -1) {
+			break;
+		}
 	}
 	udev_enumerate_unref(enumerate);
 
@@ -580,17 +597,11 @@ main (int argc, char* argv[])
 		}
 		if (FD_ISSET(fd_hidraw, &fds)) {
 			if ((key = read_hidraw(fd_hidraw)) == RELEASE) {
-				printf("release %d...", oldkey);
-				fflush(stdin);
 				uinput_write(fd_uinput, oldkey, KEYUP);
 				oldkey = -1;
-				printf(" done\n");
 			} else {
-				printf("push %d...", key);
-				fflush(stdin);
 				uinput_write(fd_uinput, key, KEYDOWN);
 				oldkey = key;
-				printf(" done\n");
 			}
 		}
 		usleep(250*1000);
