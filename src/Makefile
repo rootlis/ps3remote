@@ -12,4 +12,4 @@ ps3remote: $(OBJ)
 
 .PHONY: clean
 clean:
-	rm -f ps3remote *.o
+	rm -f ps3remote $(OBJ)
