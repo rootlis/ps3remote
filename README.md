@@ -14,11 +14,12 @@ The remote light will blink once, and it should be connected. Press a button. If
 
 ### Running the software
 - Compile in the [src](../master/src/) directory with `make`
-- Run `./ps3remote`
+- `make install`
+- Run `ps3remote`
 
-The driver will set up a new event device under `/dev/input/`, and will automatically connect to the remote when it is available. Press some number buttons. You should see them typed out as you would with a keyboard.
+The driver will set up a new event device under `/dev/input/`, and will automatically connect to the remote when the remote is available. Press some number buttons. You should see them typed out as you would with a keyboard.
 
-I've also included a systemd service file. Modify it to point to your program. Drop it in `/etc/systemd/system/`.
+I've also included a systemd service file. Modify it to point to your program, drop the modified version in `/etc/systemd/system/`, then run and/or enable it.
 ```shell
 $ systemd start ps3remote.service
 $ systemd enable ps3remote.service
