@@ -3,7 +3,7 @@ Description=Userspace PS3 Remote Driver
 Wants=bluetooth.target
 
 [Service]
-ExecStart=/opt/ps3remote/bin/ps3remote
+ExecStart=/usr/bin/ps3remote
 
 [Install]
 WantedBy=multi-user.target
