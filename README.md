@@ -1,7 +1,7 @@
 ps3remote
 =========
 
-Linux userspace driver for SMK-Link VP3700 Bluetooth remote
+Linux userspace driver for [SMK-Link VP3700 Bluetooth remote](http://www.smklink.com/products/blu-link-universal-remote-control-for-playstation-3)
 
 ### Connecting the remote
 - On the remote, hold Enter and Start for a few seconds until the blue light at the top turns on
@@ -19,7 +19,7 @@ The remote light will blink once, and it should be connected. Press a button. If
 The driver will set up a new event device under `/dev/input/`, and will automatically connect to the remote when it is available. Press some number buttons. You should see them typed out as you would with a keyboard.
 
 I've also included a systemd service file. Modify it to point to your program. Drop it in `/etc/systemd/system/`.
-```
+```shell
 $ systemd start ps3remote.service
 $ systemd enable ps3remote.service
 Created symlink from /etc/systemd/system/multi-user.target.wants/ps3remote.service to /etc/systemd/system/ps3remote.service.

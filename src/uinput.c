@@ -164,5 +164,4 @@ uinput_sendkey (int fd, uint16_t key, int32_t value)
 	 */
 	uinput_write(fd, ev, sizeof ev);
 	return 0;
-
 }
