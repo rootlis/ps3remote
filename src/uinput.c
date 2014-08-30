@@ -14,13 +14,10 @@ debug_event (struct input_event *ev)
 {
 	int size;
 	int i;
-	size = sizeof ev;
-	for (i=size/2 - 1; i>=0; i--) {
-		printf("0x%02x ", ((uint8_t*)ev)[i]);
-	}
-	putchar('\n');
-	for (i=size - 1; i>=size/2; i--) {
-		printf("0x%02x ", ((uint8_t*)ev)[i]);
+	size = sizeof(struct input_event);
+	printf("=>");
+	for (i=size - 2; i>=0; i-=2) {
+		printf(" 0x%04x", *((uint16_t*)((uint8_t*)ev+i)));
 	}
 	putchar('\n');
 }
@@ -30,7 +27,6 @@ static int
 uinput_write (int fd, struct input_event *ev, size_t size)
 {
 	ssize_t bytes;
-	DEBUG_FN(debug_event(ev));
 	if ((bytes = write(fd, ev, size)) < size) {
 		if (bytes < 0) {
 			perror("write");
@@ -154,7 +150,11 @@ uinput_sendkey (int fd, uint16_t key, int32_t value)
 	ev[1].type = EV_SYN;
 	ev[1].code = SYN_REPORT;
 
+	debug_puts("Sending EV_KEY event to uinput");
+	DEBUG_FN(debug_event(&(ev[0])));
 	uinput_write(fd, &ev[0], sizeof ev[0]);
+	debug_puts("Sending EV_SYN event to uinput");
+	DEBUG_FN(debug_event(&(ev[1])));
 	uinput_write(fd, &ev[1], sizeof ev[1]);
 	return 0;
 
