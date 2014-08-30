@@ -7,14 +7,14 @@ Linux userspace driver for [SMK-Link VP3700 Bluetooth remote](http://www.smklink
 - Configure your Makefile manually
 - Compile in the [src](../master/src/) directory with `make`
 - `make install`
-- Run `ps3remote` or `systemd start ps3remote.service`
+- Run `ps3remote` or `systemctl start ps3remote.service`
 
 The driver will set up a new event device under `/dev/input/`, and will automatically connect to the remote when the remote is available. Press some number buttons. You should see them typed out as you would with a keyboard.
 
-I've also included a systemd service file. Modify it to point to your program, drop the modified version in `/etc/systemd/system/`, then run and/or enable it.
+I've included a systemd service file. Modify it to point to your program, drop the modified version in `/etc/systemd/system/`, then run and/or enable it.
 ```shell
-$ systemd start ps3remote.service
-$ systemd enable ps3remote.service
+$ systemctl start ps3remote.service
+$ systemctl enable ps3remote.service
 Created symlink from /etc/systemd/system/multi-user.target.wants/ps3remote.service to /etc/systemd/system/ps3remote.service.
 ```
 
