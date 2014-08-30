@@ -57,6 +57,30 @@ uinput_open (void)
 		perror("UI_SET_EVBIT");
 		goto uinput_open_error;
 	}
+
+	/* 
+	 * KEY_OK needs to be set for XBMC to receive any keypresses. I don't
+	 * know why this is necessary. From what I can tell, any keybit at or
+	 * above KEY_OK will work, but anything lower will not. I haven't done
+	 * thorough testing, though, so this could be wrong.
+	 */
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_OK) < 0) goto set_keybit_error;
+
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_FASTFORWARD)  < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_NEXTSONG)     < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PAUSE)        < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PLAY)         < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_PREVIOUSSONG) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_REWIND)       < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_STOP)         < 0) goto set_keybit_error;
+
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_ENTER) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_UP)    < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_DOWN)  < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_LEFT)  < 0) goto set_keybit_error;
+
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_0) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_1) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_2) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_3) < 0) goto set_keybit_error;
@@ -66,62 +90,24 @@ uinput_open (void)
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_7) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_8) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_9) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_0) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_ENTER) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_M) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_PREVIOUSSONG) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_NEXTSONG) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_ESC) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_CLEAR) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_EJECTCD) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_MENU) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_TIME) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_PREVIOUS) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_NEXT) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_PLAY) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_REWIND) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_FASTFORWARD) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_FORWARD) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_STOP) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_PAUSE) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_P) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_H) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_L) < 0) goto set_keybit_error;
+
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_A) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_CONTEXT_MENU) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_HOME) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_LIST) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_LANGUAGE) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_UP) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_RIGHT) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_DOWN) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_LEFT) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_V) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_O) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_X) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_U) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_S) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_D) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_N) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_I) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_B) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_R) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_D) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_G) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_H) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_I) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_L) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_M) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_N) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_O) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_P) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_R) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_S) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_U) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_V) < 0) goto set_keybit_error;
+	if (ioctl(fd, UI_SET_KEYBIT, KEY_X) < 0) goto set_keybit_error;
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_Y) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_OPTION) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_BACK) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, BTN_0) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_SCREEN) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_FRAMEBACK) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_FRAMEFORWARD) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_SUBTITLE) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_AUDIO) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_ANGLE) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_INFO) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_BLUE) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_RED) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_GREEN) < 0) goto set_keybit_error;
-	if (ioctl(fd, UI_SET_KEYBIT, KEY_YELLOW) < 0) goto set_keybit_error;
 
 	memset(&uidev, 0, sizeof uidev);
 	snprintf(uidev.name, UINPUT_MAX_NAME_SIZE, UREMOTE_NAME);
