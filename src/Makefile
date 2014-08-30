@@ -1,5 +1,5 @@
 CC = /usr/bin/gcc
-CFLAGS = -Wall -O3
+CFLAGS = -Wall -O3 -DDEBUG=0
 INSTALL = /usr/bin/install
 PREFIX = /usr
 
@@ -12,10 +12,13 @@ systemd = /usr/lib/systemd/system
 bin = $(PREFIX)/bin
 
 ps3remote: $(obj)
-	$(CC) $(CFLAGS) -ludev -o ps3remote $(obj)
+	$(CC) -ludev -o ps3remote $(obj) $(CFLAGS)
+
+debug: CFLAGS += -g -UDEBUG -DDEBUG
+debug: ps3remote
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $<
+	$(CC) -c $< $(CFLAGS)
 
 install: ps3remote
 	$(INSTALL) -o root -m 755 ps3remote $(bin)
@@ -28,4 +31,4 @@ uninstall:
 clean:
 	rm -f ps3remote $(obj)
 
-.PHONY: all clean install uninstall
+.PHONY: all clean debug install uninstall
