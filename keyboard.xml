@@ -1,0 +1,65 @@
+<keymap name="VP3700">
+	<global>
+		<keyboard>
+			<v name="triangle">noop</v>
+			<o name="circle">back</o>
+			<x name="cross">back</x>
+			<u name="square">togglefullscreen</u>
+
+			<m name="menu">contextmenu</m>
+			<i name="info">info</p>
+			<p name="popup">contextmenu</p>
+
+			<up>up</up>
+			<right>right</right>
+			<down>down</down>
+			<left>left</left>
+			<return>select</return>
+
+			<home>firstpage</home>
+
+			<play>play</play>
+			<fastforward>fastforward</fastforward>
+			<next_track>skipnext</next_track>
+			<prev_track>skipprevious</prev_track>
+			<rewind>rewind</rewind>
+			<stop>stop</stop>
+			<pause>playpause</pause>
+
+			<r>red</r>
+			<g>green</g>
+			<b>blue</b>
+			<y>yellow</y>
+
+			<l name="list">playlist</l>
+			<a name="aspect">aspectratio</a>
+
+			<d name="audio">audionextlanguage</d>
+			<s name="subt">cyclesubtitle</s>
+			<n name="angle">noop</n>
+
+			<one>number1</one>
+			<two>number2</two>
+			<three>number3</three>
+			<four>number4</four>
+			<five>number5</five>
+			<six>number6</six>
+			<seven>number7</seven>
+			<eight>number8</eight>
+			<nine>number9</nine>
+			<zero>number0</zero>
+		</keyboard>
+	</global>
+	<fullscreenvideo>
+		<keyboard>
+			<x>smallstepback</x>
+			<o>smallstepback</o>
+
+			<up>chapterorbigstepforward</up>
+			<right>stepforward</right>
+			<down>chapterorbigstepback</down>
+			<left>stepback</left>
+			<return>osd</return>
+		</keyboard>
+	</fullscreenvideo>
+</keymap>
