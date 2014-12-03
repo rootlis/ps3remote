@@ -39,7 +39,7 @@ clean:
 	$(RM) $(target) $(objs)
 
 $(target): $(objs)
-	$(CC) $(CFLAGS) $(LDLIBS) $^ -o $(target)
+	$(CC) $(CFLAGS) $^ -o $(target) $(LDLIBS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
