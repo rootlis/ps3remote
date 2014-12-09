@@ -59,10 +59,11 @@ uinput_open (void)
 	}
 
 	/* 
-	 * KEY_OK needs to be set for XBMC to receive any keypresses. I don't
-	 * know why this is necessary. From what I can tell, any keybit at or
-	 * above KEY_OK will work, but anything lower will not. I haven't done
-	 * thorough testing, though, so this could be wrong.
+	 * KEY_OK needs to be set for XBMC to receive any keypresses. XBMC
+	 * determines input device type from the list of enabled keys. Unless
+	 * a key at or above KEY_OK is enabled, XBMC will mishandle the remote.
+	 * You don't need to map anything to these keys to solve the XBMC
+	 * problem.
 	 */
 	if (ioctl(fd, UI_SET_KEYBIT, KEY_OK) < 0) goto keybit_error;
 
