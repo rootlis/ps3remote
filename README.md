@@ -5,7 +5,7 @@ Linux userspace driver for [SMK-Link VP3700 Bluetooth remote](http://www.smklink
 
 ### Running the software
 - Configure your Makefile manually
-- Compile in the [src](../master/src/) directory with `make`
+- Compile in the top directory with `make`
 - `make install`
 - Run `ps3remote` or `systemctl start ps3remote.service`
 
