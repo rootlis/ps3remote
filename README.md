@@ -1,7 +1,7 @@
 ps3remote
 =========
 
-Linux userspace driver for [SMK-Link VP3700 Bluetooth remote](http://www.smklink.com/products/blu-link-universal-remote-control-for-playstation-3)
+Linux userspace driver for [SMK-Link VP3700 Bluetooth remote](http://www.smklink.com/pages/blu-link-universal-remote-for-playstation-3-vp3700-user-guide)
 
 ### Running the software
 - Configure your Makefile manually
