@@ -27,6 +27,8 @@ Created symlink from /etc/systemd/system/multi-user.target.wants/ps3remote.servi
 
 The remote light will blink once, and it should be connected. Press a button. If the red light lingers for a second after you release the button, something has gone wrong.
 
+See my old [.bluetoothctl_history](../master/.bluetoothctl_history) for an example pairing session.
+
 ### Modifying the software
 You can modify the keymap in [hidraw.c](../master/src/hidraw.c#L67) to set the buttons to whatever you want. Valid key values are in your `linux/input.h` header file. Make sure all your keys are enabled in [input.c](../master/src/uinput.c#L67).
 
